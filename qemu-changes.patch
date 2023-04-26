@@ -1,0 +1,79 @@
+diff --git a/hw/arm/Kconfig b/hw/arm/Kconfig
+index b53bd7f0b2..ec46d32f95 100644
+--- a/hw/arm/Kconfig
++++ b/hw/arm/Kconfig
+@@ -32,6 +32,7 @@ config ARM_VIRT
+     select VIRTIO_MEM_SUPPORTED
+     select ACPI_CXL
+     select ACPI_HMAT
++    select SIMPLE_ROM
+ 
+ config CHEETAH
+     bool
+diff --git a/hw/arm/virt.c b/hw/arm/virt.c
+index a89d699f0b..07eecc0fc3 100644
+--- a/hw/arm/virt.c
++++ b/hw/arm/virt.c
+@@ -61,6 +61,7 @@
+ #include "hw/platform-bus.h"
+ #include "hw/qdev-properties.h"
+ #include "hw/arm/fdt.h"
++#include "hw/misc/simple_rom.h"
+ #include "hw/intc/arm_gic.h"
+ #include "hw/intc/arm_gicv3_common.h"
+ #include "hw/irq.h"
+@@ -156,6 +157,7 @@ static const MemMapEntry base_memmap[] = {
+     [VIRT_PVTIME] =             { 0x090a0000, 0x00010000 },
+     [VIRT_SECURE_GPIO] =        { 0x090b0000, 0x00001000 },
+     [VIRT_MMIO] =               { 0x0a000000, 0x00000200 },
++    [VIRT_SIMPLE_ROM] =         { 0x0b000000, 0x00000200 },
+     /* ...repeating for a total of NUM_VIRTIO_TRANSPORTS, each of that size */
+     [VIRT_PLATFORM_BUS] =       { 0x0c000000, 0x02000000 },
+     [VIRT_SECURE_MEM] =         { 0x0e000000, 0x01000000 },
+@@ -2311,6 +2313,8 @@ static void machvirt_init(MachineState *machine)
+      */
+     create_virtio_devices(vms);
+ 
++    simple_rom_create(vms->memmap[VIRT_SIMPLE_ROM].base);
++
+     vms->fw_cfg = create_fw_cfg(vms, &address_space_memory);
+     rom_set_fw(vms->fw_cfg);
+ 
+diff --git a/hw/misc/Kconfig b/hw/misc/Kconfig
+index 2ef5781ef8..5cc30236c0 100644
+--- a/hw/misc/Kconfig
++++ b/hw/misc/Kconfig
+@@ -73,6 +73,9 @@ config IMX
+     select SSI
+     select USB_EHCI_SYSBUS
+ 
++config SIMPLE_ROM
++    bool
++
+ config STM32F2XX_SYSCFG
+     bool
+ 
+diff --git a/hw/misc/meson.build b/hw/misc/meson.build
+index a40245ad44..67c573c4f3 100644
+--- a/hw/misc/meson.build
++++ b/hw/misc/meson.build
+@@ -17,6 +17,7 @@ softmmu_ss.add(when: 'CONFIG_A9SCU', if_true: files('a9scu.c'))
+ softmmu_ss.add(when: 'CONFIG_ARM11SCU', if_true: files('arm11scu.c'))
+ 
+ softmmu_ss.add(when: 'CONFIG_ARM_V7M', if_true: files('armv7m_ras.c'))
++softmmu_ss.add(when: 'CONFIG_SIMPLE_ROM', if_true: files('simple_rom.c'))
+ 
+ # Mac devices
+ softmmu_ss.add(when: 'CONFIG_MOS6522', if_true: files('mos6522.c'))
+diff --git a/include/hw/arm/virt.h b/include/hw/arm/virt.h
+index e1ddbea96b..2dd68b98c3 100644
+--- a/include/hw/arm/virt.h
++++ b/include/hw/arm/virt.h
+@@ -86,6 +86,7 @@ enum {
+     VIRT_ACPI_GED,
+     VIRT_NVDIMM_ACPI,
+     VIRT_PVTIME,
++    VIRT_SIMPLE_ROM,
+     VIRT_LOWMEMMAP_LAST,
+ };
+ 
